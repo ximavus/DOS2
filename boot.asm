@@ -1,17 +1,13 @@
- org 0x7C00   ; add 0x7C00 to label addresses
-   mov ah, 0
-   mov al, 3
-   int 0x10
-   mov ax, 0  ; set up segments
-   mov ds, ax
-   mov es, ax
-   mov ss, ax     ; setup stack
-   mov sp, 0x7C00 ; stack grows downwards from 0x7C00
-   mov bp, sp
-   mov si, welcome
-   call print_string
- 
- mainloop:
+[org 0x7c00]
+mov ax, 0 ; Loaded sector! setting up segments (flat memory model)
+mov ds, ax
+mov es, ax
+mov ss, ax ; Done! Setting up stack
+mov sp, 0x7C00 ; Stack settings: direction: downwards, base address: 0x7c00
+mov bp, sp
+mov si, welcome
+call print_string ; Hello
+mainloop:
    mov si, prompt
    call print_string
  
@@ -19,30 +15,30 @@
    call get_string
  
    mov si, buffer
-   cmp byte [si], 0  ; blank line?
-   je mainloop       ; yes, ignore it
+   cmp byte [si], 0
+   je mainloop
  
    mov si, buffer
-   mov di, cmd_help  ; "help" command
+   mov di, cmd_help  ; The code for calling the help command
    call strcmp
    jc .help
  
    mov si, buffer
-   mov di, cmd_desc
+   mov di, cmd_desc ; The code for calling the desc command
    call strcmp
    jc .desc
 
    mov si, buffer
-   mov di, cmd_quit
+   mov di, cmd_quit ; The code for calling the quit command
    call strcmp
    jc .quit
 
    mov si, buffer
-   call isecho
+   call isecho ; The code for calling the echo command
    jc .echo
 
-   mov si,badcommand
-   call print_string 
+   mov si, badcommand
+   call print_string ; Not a command!
    jmp mainloop
  
  .help:
@@ -57,7 +53,7 @@
    mov ax, 0x5307
    mov bx, 0x0001
    mov cx, 0x0003
-   int 0x15
+   int 0x15 ; Much easier than the last time I tried to make a poweroff function! Thank you BIOS!
    jmp mainloop
  .echo:
    mov si, buffer
@@ -69,21 +65,17 @@
    int 0x10
    jmp mainloop
  
- welcome db "MiniCMD v0.2!", 0x0D, 0x0A, 0
- badcommand db "!", 0x0D, 0x0A, 0
- prompt db "> ", 0
- cmd_help db "help", 0
- cmd_desc db "desc", 0
- cmd_quit db "quit", 0
- msg_help db "help, desc (prints desc), quit (turn off), echo (print str)", 0x0D, 0x0A, 0
- msg_desc db "DOS-like OS", 0x0D, 0x0A, 0
- buffer times 64 db 0
+welcome db "MiniCMD v0.2!", 0x0D, 0x0A, 0
+badcommand db "!", 0x0D, 0x0A, 0
+prompt db "> ", 0
+cmd_help db "help", 0
+cmd_desc db "desc", 0
+cmd_quit db "quit", 0
+msg_help db "help, desc (prints desc), quit (turn off), echo (print str)", 0x0D, 0x0A, 0
+msg_desc db "DOS-like OS", 0x0D, 0x0A, 0
+buffer times 64 db 0
  
- ; ================
- ; calls start here
- ; ================
- 
- print_string:
+print_string:
    lodsb
    or al, al
    jz .done
@@ -93,62 +85,61 @@
  .done:
    ret
  
- get_string:
+get_string:
    xor cl, cl
  
  .loop:
    mov ah, 0
-   int 0x16   ; wait for keypress
+   int 0x16
  
-   cmp al, 0x08    ; backspace pressed?
-   je .backspace   ; yes, handle it
+   cmp al, 0x08
+   je .backspace
  
-   cmp al, 0x0D  ; enter pressed?
-   je .done      ; yes, we're done
+   cmp al, 0x0D
+   je .done
  
-   cmp cl, 0x3F  ; 63 chars inputted?
-   je .loop      ; yes, only let in backspace and enter
+   cmp cl, 0x3F
+   je .loop 
  
    mov ah, 0x0E
-   int 0x10      ; print out character
+   int 0x10
  
-   stosb  ; put character in buffer
+   stosb
    inc cl
    jmp .loop
  
  .backspace:
-   cmp cl, 0	; beginning of string?
-   je .loop	; yes, ignore the key
+   cmp cl, 0
+   je .loop
  
    dec di
-   mov byte [di], 0	; delete character
-   dec cl		; decrement counter as well
+   mov byte [di], 0
+   dec cl
  
    mov ah, 0x0E
    mov al, 0x08
-   int 10h		; backspace on the screen
+   int 10h
  
    mov al, ' '
-   int 10h		; blank character out
+   int 10h
  
    mov al, 0x08
-   int 10h		; backspace again
+   int 10h
  
-   jmp .loop	; go to the main loop
+   jmp .loop
  
  .done:
-   mov al, 0	; null terminator
+   mov al, 0
    stosb
- 
-   mov ah, 0x0E
-   mov al, 0x0D
+   mov ah, 0x0e
+   mov al, 0x0d
    int 0x10
-   mov al, 0x0A
-   int 0x10		; newline
+   mov al, 0x0a
+   int 0x10
  
    ret
 
- isecho:
+isecho:
   cmp byte [si], 'e'
   jne .notequal
   inc si
@@ -173,25 +164,20 @@
  
  strcmp:
  .loop:
-   mov al, [si]   ; grab a byte from SI
-   mov bl, [di]   ; grab a byte from DI
-   cmp al, bl     ; are they equal?
-   jne .notequal  ; nope, we're done.
- 
-   cmp al, 0  ; are both bytes (they were equal before) null?
-   je .done   ; yes, we're done.
- 
-   inc di     ; increment DI
-   inc si     ; increment SI
-   jmp .loop  ; loop!
- 
+   mov al, [si]
+   mov bl, [di]
+   cmp al, bl
+   jne .notequal
+   cmp al, 0
+   je .done
+   inc di
+   inc si
+   jmp .loop
  .notequal:
-   clc  ; not equal, clear the carry flag
+   clc
    ret
- 
  .done: 	
-   stc  ; equal, set the carry flag
+   stc
    ret
- 
-   times 510-($-$$) db 0
-   dw 0AA55h ; some BIOSes require this signature
+times 510-($-$$) db 0
+dw 0xaa55
