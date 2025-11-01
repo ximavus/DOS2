@@ -1,9 +1,9 @@
 # DOS2<br/>
 A boot sector OS that I'm working on.<br/>
 # To run<br/>
-Dependencies: qemu (to run on a virtual machine), dd (to run on a physical machine), nasm (optional for making changes)<br/>
-Run on qemu: `qemu-system-x86_64 -drive format=raw,file=boot.bin,index=0,if=floppy, -m 1024K`<br/>
-Run on a physical machine by a USB stick: `sudo dd if=boot.bin of=/dev/sda && sync`<br/>
+Dependencies: qemu (to run on a virtual machine), dd (to run on a physical machine), nasm (to compile)<br/>
+Run on qemu: `make`<br/>
+Run on a physical machine by a USB stick: `nasm boot.asm -o boot.bin`<br/>`sudo dd if=boot.bin of=/dev/sda && sync`<br/>
 # Attention! The sda device may not be correct so you want to check which it is. It is always /dev/sd and a USB drive letter<br/>
 ## PC requirements:<br/>
 CPU: Any 16-bit or more CPU that supports BIOS interrupts 0x10 for printing characters, 0x16 for keyboard input and 0x15 for poweroff<br/>
