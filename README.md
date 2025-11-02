@@ -13,11 +13,14 @@ Storage: atleast 512-bytes (its a bootsector OS, duh)<br/>
 GPU: None :)<br/>
 Display: Any display that supports VGA text mode 0x03 (80x25 16 color characters) and graphics mode 0x13 (320x200 256 color pixels)<br/>
 
-## Goals:
+## Goals:<br/>
 Reached:<br/>
 make an echo command for printing<br/><br/>
 In the future:<br/>
 Loading programs (by raw sector reading)<br/>
 Possibly in the future:<br/>
-A simple filesystem
+A simple filesystem<br/>
 A C API for people that want to make programs for the OS
+
+
+![DOS2 running on qemu](https://github.com/ximavus/DOS2/blob/main/DOS2_on_qemu.png?raw=true)
