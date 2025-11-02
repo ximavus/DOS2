@@ -1,15 +1,7 @@
 [org 0x7c00]
-mov ax, 0 ; Loaded sector! setting up segments (flat memory model)
-mov ds, ax
-mov es, ax
-mov ss, ax ; Done! Setting up stack
-mov sp, 0x7C00 ; Stack settings: direction: downwards, base address: 0x7c00
-mov bp, sp
-mov si, welcome
-call print_string ; Hello
 mainloop:
    mov si, prompt
-   call print_string
+   call print
  
    mov di, buffer
    call get_string
@@ -21,11 +13,6 @@ mainloop:
    mov di, cmd_help  ; The code for calling the help command
    call strcmp
    jc .help
- 
-   mov si, buffer
-   mov di, cmd_desc ; The code for calling the desc command
-   call strcmp
-   jc .desc
 
    mov si, buffer
    mov di, cmd_quit ; The code for calling the quit command
@@ -33,18 +20,54 @@ mainloop:
    jc .quit
 
    mov si, buffer
-   call isecho ; The code for calling the echo command
+   mov di, cmd_graph ; The code for calling the graph command
+   call strcmp
+   jc .graph
+
+   mov si, buffer
+   add si, 4
+   mov byte [si], 0
+   sub si, 4
+   mov di, cmd_echo ; The code for calling the echo command
+   call strcmp
    jc .echo
 
    mov si, buffer
-   mov di, cmd_cls
+   mov di, cmd_cls ; The code for calling the cls command
    call strcmp
    jc .cls
 
-   mov si, badcommand
-   call print_string ; Not a command!
+   mov si, buffer
+   mov di, cmd_info ; The code for calling the info command
+   call strcmp
+   jc .info
+
+   mov si, badcmd
+   call print ; Not a command!
    jmp mainloop
  
+ .graph:
+    mov ah, 0
+    mov al, 0x13
+    int 0x10
+    mov ebx, 0xA0000
+    .loop:
+	xor ax, ax
+	int 0x1A
+	ror dx, 2
+	add dx, cx
+	mov word[ebx], dx
+	inc ebx
+	cmp ebx, 0xAFA00
+	jng .loop
+    mov cx, 0x0f
+    mov dx, 0x4240
+    mov ah, 0x86
+    int 0x15
+    mov ah, 0
+    mov al, 0x3
+    int 0x10
+    jmp mainloop
  .cls:
     mov ah, 0x0
     mov al, 0x03
@@ -52,11 +75,7 @@ mainloop:
     jmp mainloop
  .help:
    mov si, msg_help
-   call print_string
-   jmp mainloop
- .desc:
-   mov si, msg_desc
-   call print_string
+   call print
    jmp mainloop
  .quit:
    mov ax, 0x5307
@@ -64,78 +83,74 @@ mainloop:
    mov cx, 0x0003
    int 0x15 ; Much easier than the last time I tried to make a poweroff function! Thank you BIOS!
    jmp mainloop
+ .info:
+   mov si, msg_info
+   call print
+   jmp mainloop
  .echo:
    mov si, buffer
    add si, 5
-   call print_string
+   call print
    mov al, 0x0d
    int 0x10
    mov al, 0x0a
    int 0x10
    jmp mainloop
- 
-welcome db "MiniCMD v0.3!", 0x0D, 0x0A, 0
-badcommand db "!", 0x0D, 0x0A, 0
+
+bufsiz equ 30
+badcmd db "!", 0x0D, 0x0A, 0
 prompt db "> ", 0
 cmd_cls db "cls", 0
 cmd_help db "help", 0
-cmd_desc db "desc", 0
 cmd_quit db "quit", 0
-msg_help db "help, desc, quit, echo, cls", 0x0D, 0x0A, 0
-msg_desc db "DOS-like OS", 0x0D, 0x0A, 0
-buffer times 32 db 0
+cmd_graph db "graph", 0
+cmd_info db "info", 0
+cmd_echo db "echo", 0
+cmd_run db "run", 0
+msg_info db "A 512-byte OS. More info on github.com/ximavus/DOS2", 0x0A, 0x0D, 0
+msg_help db "echo, graph, cls, help, quit, info", 0x0D, 0x0A, 0
+buffer times bufsiz db 0
 
-print_string:
+print:
    lodsb
    or al, al
    jz .done
-   mov ah, 0x0e
+   mov ah, 14
    int 0x10
-   jmp print_string
- .done:
-   ret
+   jmp print
+   .done:
+      ret
  
 get_string:
    xor cl, cl
- 
  .loop:
    mov ah, 0
    int 0x16
- 
    cmp al, 0x08
    je .backspace
- 
    cmp al, 0x0D
    je .done
- 
-   cmp cl, 0x3F
+   cmp cl, bufsiz-1
    je .loop 
- 
-   mov ah, 0x0E
+   mov ah, 0x0e
    int 0x10
- 
    stosb
    inc cl
    jmp .loop
  
  .backspace:
-   cmp cl, 0
-   je .loop
- 
+   or cl, 0
+   jz .loop
    dec di
    mov byte [di], 0
    dec cl
- 
    mov ah, 0x0E
    mov al, 0x08
    int 0x10
- 
    mov al, ' '
    int 0x10
- 
    mov al, 0x08
    int 0x10
- 
    jmp .loop
  
  .done:
@@ -146,31 +161,7 @@ get_string:
    int 0x10
    mov al, 0x0a
    int 0x10
- 
    ret
-
-isecho:
-  cmp byte [si], 'e'
-  jne .notequal
-  inc si
-  cmp byte [si], 'c'
-  jne .notequal
-  inc si
-  cmp byte [si], 'h'
-  jne .notequal
-  inc si
-  cmp byte [si], 'o'
-  jne .notequal
-  inc si
-  cmp byte [si], ' '
-  jne .notequal
-  jmp .equal
-  .notequal:
-    clc
-    ret
-  .equal:
-    stc
-    ret
  
  strcmp:
  .loop:
